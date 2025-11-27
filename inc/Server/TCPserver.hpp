@@ -6,7 +6,7 @@
 /*   By: gnyssens <gnyssens@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/13 13:56:07 by nicolive          #+#    #+#             */
-/*   Updated: 2025/11/26 13:24:09 by gnyssens         ###   ########.fr       */
+/*   Updated: 2025/11/26 16:17:13 by gnyssens         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,7 +42,6 @@ struct Listener {
   int port;
   std::vector<const Block *> servers; // pointers to respective server blocks who are using this listener
 };
-
 
 struct HttpRequest {
     std::string method;  //GET/POST/DELETE
