@@ -10,7 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../../inc/Server/TCPserver.hpp"
+#include "../../inc/temp.hpp"
 #include <arpa/inet.h>
 #include <cstring>
 #include <stdexcept>
@@ -22,6 +22,8 @@ TCPserver::TCPserver(const Config &cfg)
 
 TCPserver::~TCPserver() {
   closeAllSockets();
+  for (std::map<int, CGI *>::iterator it = _cgis.begin(); it != _cgis.end(); ++it)
+    delete it->second;
 }
 
 void TCPserver::init() {

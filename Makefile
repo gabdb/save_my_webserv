@@ -19,7 +19,7 @@ OBJ_DIR 	= obj
 SRC 		= 	$(SRC_DIR)/main.cpp \
 				$(SRC_DIR)/config/Config.cpp $(SRC_DIR)/config/ConfigChecks.cpp $(SRC_DIR)/config/ConfigParse.cpp $(SRC_DIR)/config/getterConfig.cpp\
 				$(SRC_DIR)/utils/utils_transform.cpp \
-				$(SRC_DIR)/Server/InitServer.cpp $(SRC_DIR)/Server/RunServer.cpp \
+				$(SRC_DIR)/Server/InitServer.cpp $(SRC_DIR)/Server/RunServer.cpp $(SRC_DIR)/Server/CGI.cpp\
 				\
 				
 				

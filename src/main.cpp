@@ -31,14 +31,13 @@ int main(int argc, char const *argv[]) {
     TCPserver server(config);
 
     server.init();
-    // Gab TODO: Focus on .run(), add up to TCPserver or create your own class (TCPserver prefered)
-
     const std::vector<Listener> &listeners = server.getListeners();
     for (size_t i = 0; i < listeners.size(); ++i) {
       std::cout << "Listening on host='" << listeners[i].host
                 << "' port=" << listeners[i].port
                 << " fd=" << listeners[i].fd << std::endl;
     }
+    // Gab TODO: Focus on .run(), add up to TCPserver or create your own class (TCPserver prefered)
     server.run();
   } catch (const std::exception &e) {
     std::cerr << "Fatal error: " << e.what() << std::endl;

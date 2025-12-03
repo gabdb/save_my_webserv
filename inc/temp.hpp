@@ -20,6 +20,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "./Server/CGI.hpp"
 #include "./Server/TCPserver.hpp"
 #include "./config/Config.hpp"
 

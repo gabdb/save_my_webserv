@@ -64,7 +64,6 @@ void TCPserver::parseRequestLineAndHeaders(Client &client, const std::string &he
 	}
 }
 
-
 void TCPserver::ReadfromClient(Client &client)
 {
 	char buffer[4096];
