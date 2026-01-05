@@ -6,7 +6,7 @@
 /*   By: gnyssens <gnyssens@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/13 13:56:07 by nicolive          #+#    #+#             */
-/*   Updated: 2025/12/03 13:15:28 by gnyssens         ###   ########.fr       */
+/*   Updated: 2026/01/04 18:05:19 by gnyssens         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,8 +21,14 @@
 #include <sstream>
 #include <sys/select.h>
 #include <sys/socket.h>
-#include <sys/types.h> // for pid_t
+#include <sys/types.h>
 #include <unistd.h>
+#include <string.h>
+#include <fstream>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <algorithm>
+#include <ctime>
 
 #include "../config/Config.hpp"
 
@@ -52,6 +58,7 @@ enum ClientState {
   READ_REQUEST,
   PARSE_REQUEST,
   HANDLE_REQUEST,
+  WAIT_CGI,
   SEND_RESPONSE,
   CLOSE_CONNECTION
 };
@@ -63,7 +70,7 @@ struct Client {
   bool wantRead;
   bool wantWrite;
   const Block *serverBlock;
-  bool keepAlive;
+  bool keepAlive; //p-e retirer
 
   // rajout gab
   const Block *locationBlock; // determined after parsing the request path (== sous-block en fonction du path/url dans la requete http)
@@ -71,9 +78,11 @@ struct Client {
   ClientState state;   // enum
   size_t bodyExpected; // Content-Length
   size_t bodyReceived; // to track when body is complete
-  int listenerFd; // fd du listener qui a accepté ce client
+  int listenerFd; // fd du listener qui a accepté ce client^
+
+  time_t lastActivity;
   
-  // HttpResponse response; ??? -> teammate's responsibility
+  // HttpResponse response; ???
 };
 
 class TCPserver {
@@ -117,14 +126,24 @@ private:
   const Block* chooseServerBlock(Client &client);
   const Block* findLocationBlock(const Block &serverBlock, const std::string &path);
   bool isMethodAllowed(const Client &client) const;
+  std::string getRoot(const Client &client) const;
+  std::string buildFullPath(const std::string &requestPath, const std::string &root, const std::string &locationPrefix) const;
+  void generateErrorResponse(Client &client, int status);
+  void handleGET(Client &client, const std::string &path);
+  void handlePOST(Client &client, const std::string &path);
+  void handleDELETE(Client &client, const std::string &path);
+  void handleRequest(Client &client);
   void WritetoClient(Client &client);
   void closeClientConnexion(int fd);
 };
+
+void buildAndSendCgiResponse(Client &cl, const std::string &out);
 
 // Helpers to navigate key/value pairs
 const key *findKey(const Block &block, const std::string &name);                   // TODO:
 std::vector<const key *> findAllKeys(const Block &block, const std::string &name); // TODO:
 std::vector<std::string> getStringValues(const Block &block, const std::string &name);
 std::vector<int> getIntValues(const Block &block, const std::string &name);
+
 
 #endif

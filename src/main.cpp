@@ -3,13 +3,44 @@
 /*                                                        :::      ::::::::   */
 /*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: nicolive <nicolive@student.s19.be>         +#+  +:+       +#+        */
+/*   By: gnyssens <gnyssens@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/12 16:56:24 by nicolive          #+#    #+#             */
-/*   Updated: 2025/11/13 16:07:23 by nicolive         ###   ########.fr       */
+/*   Updated: 2026/01/05 13:57:58 by gnyssens         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
+#include <iostream>
+#include <stdexcept>
+#include "../inc/config/Config.hpp"
+#include "../inc/Server/TCPserver.hpp"
+
+int main(int ac, char **av)
+{
+    if (ac != 2)
+    {
+        std::cerr << "Usage: ./webserv <config_file>\n";
+        return 1;
+    }
+
+    try
+    {
+        Config cfg(av[1]);       // parse + checks
+        TCPserver srv(cfg);      // build listeners/servers
+        srv.init();              // socket/bind/listen
+        std::cout << "webserv: running with config: " << av[1] << std::endl;
+        srv.run();               // poll loop (never returns)
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "webserv: fatal error: " << e.what() << std::endl;
+        return 1;
+    }
+    return 0;
+}
+
+
+/*
 #include "../inc/temp.hpp"
 
 int main(int argc, char const *argv[]) {
@@ -46,3 +77,4 @@ int main(int argc, char const *argv[]) {
 
   return 0;
 }
+*/

@@ -2,10 +2,12 @@
 #define CGI_HPP
 
 // #include "TCPserver.hpp"
+#include <poll.h>
 #include <string>
+#include <sys/types.h>
 #include <vector>
 
-class Client;
+struct Client;
 
 class CGI {
 public:
@@ -14,15 +16,14 @@ public:
       const std::string &scriptPath,
       const std::string &queryString);
 
-  CGI(const CGI &);
-  CGI &operator=(const CGI &);
   ~CGI();
-
   void registerPollFds(std::vector<struct pollfd> &pfds) const;
   Client &getClient() const;
   const std::string &getRawOutput() const;
   int getStdoutFd() const;
   bool isFinished() const;
+  bool hasError() const;
+  int getExitStatus() const; // Gab: use to check if an error occurred during CGI execution
   bool ownsFd(int fd) const;
   void handleIo(int fd, short revents);
   void closePipes();
@@ -40,6 +41,8 @@ private:
   std::string _toCgi;
   std::string _fromCgi;
 
+  CGI(const CGI &);
+  CGI &operator=(const CGI &);
   void startProcess(const std::string &interpreterPath,
                     const std::string &scriptPath,
                     const std::string &queryString);

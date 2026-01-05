@@ -9,38 +9,50 @@
 #    Updated: 2025/11/13 13:43:54 by nicolive         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
+NAME        = webserv
 
-NAME 		= webserv
+SRC_DIR     = src
+INC_DIR     = inc
+OBJ_DIR     = obj
 
-SRC_DIR 	= src
-INC_DIR		= inc
-OBJ_DIR 	= obj
+CC          = c++
+CPPFLAGS    = -Wall -Wextra -Werror -std=c++98 -pedantic
+INCS        = -I$(INC_DIR) -I.
 
-SRC 		= 	$(SRC_DIR)/main.cpp \
-				$(SRC_DIR)/config/Config.cpp $(SRC_DIR)/config/ConfigChecks.cpp $(SRC_DIR)/config/ConfigParse.cpp $(SRC_DIR)/config/getterConfig.cpp\
-				$(SRC_DIR)/utils/utils_transform.cpp \
-				$(SRC_DIR)/Server/InitServer.cpp $(SRC_DIR)/Server/RunServer.cpp $(SRC_DIR)/Server/CGI.cpp\
-				\
-				
-				
-OBJ			= $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
-DEPS 		= $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.d)
-CC 			= c++
-RM 			= rm -f
-CPPFLAGS 	= -Wall -Wextra -Werror -std=c++98 -pedantic
-INCS 		= -I$(INC_DIR) -I.
-	
+SRC         = \
+    $(SRC_DIR)/main.cpp \
+    $(SRC_DIR)/config/Config.cpp \
+    $(SRC_DIR)/config/ConfigChecks.cpp \
+    $(SRC_DIR)/config/ConfigParse.cpp \
+    $(SRC_DIR)/config/getterConfig.cpp \
+    $(SRC_DIR)/utils/utils_transform.cpp \
+    $(SRC_DIR)/Server/CGI.cpp \
+    $(SRC_DIR)/Server/cgiResponse.cpp \
+    $(SRC_DIR)/Server/ChooseServerBlock.cpp \
+    $(SRC_DIR)/Server/delete.cpp \
+    $(SRC_DIR)/Server/FindKeys.cpp \
+    $(SRC_DIR)/Server/FindLocationBlock.cpp \
+    $(SRC_DIR)/Server/get.cpp \
+    $(SRC_DIR)/Server/HandleRequest.cpp \
+    $(SRC_DIR)/Server/InitServer.cpp \
+    $(SRC_DIR)/Server/IsMethodAllowed.cpp \
+    $(SRC_DIR)/Server/Path.cpp \
+    $(SRC_DIR)/Server/post.cpp \
+    $(SRC_DIR)/Server/ReadFromClient.cpp \
+    $(SRC_DIR)/Server/Responses.cpp \
+    $(SRC_DIR)/Server/RunServer.cpp \
+    $(SRC_DIR)/Server/WriteToClient.cpp
+
+OBJ         = $(SRC:$(SRC_DIR)/%.cpp=$(OBJ_DIR)/%.o)
+DEPS        = $(OBJ:.o=.d)
+
 all: $(NAME)
 
 $(NAME): $(OBJ)
 	$(CC) $(CPPFLAGS) $(OBJ) -o $(NAME)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
-	@mkdir -p $(OBJ_DIR)
-	@mkdir -p $(OBJ_DIR)/config
-	@mkdir -p $(OBJ_DIR)/utils
-	@mkdir -p $(OBJ_DIR)/Server
-	
+	@mkdir -p $(dir $@)
 	$(CC) $(CPPFLAGS) $(INCS) -MMD -MP -c $< -o $@
 
 -include $(DEPS)
@@ -49,12 +61,11 @@ run: all
 	./$(NAME)
 
 clean:
-	$(RM) -r $(OBJ_DIR)
+	rm -rf $(OBJ_DIR)
 
 fclean: clean
-	$(RM) -r $(OBJ_DIR)
-	$(RM) $(NAME)
+	rm -f $(NAME)
 
 re: fclean all
 
-.PHONY: all clean fclean re
+.PHONY: all run clean fclean re

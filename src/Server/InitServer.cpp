@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   TCPserver.cpp                                      :+:      :+:    :+:   */
+/*   InitServer.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: gmiorcec <gmiorcec@student.s19.be>         +#+  +:+       +#+        */
+/*   By: gnyssens <gnyssens@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/22 09:48:26 by gmiorcec          #+#    #+#             */
-/*   Updated: 2025/11/23 21:26:00 by gmiorcec         ###   ########.fr       */
+/*   Updated: 2026/01/05 14:02:04 by gnyssens         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -83,7 +83,12 @@ void TCPserver::initListeners() {
       throw std::runtime_error("Top-level block is not 'server'");
     }
 
-    std::vector<std::string> hosts = getStringValues(srvBlock, "host");
+    std::vector<std::string> hosts; // CHANGEMENT GAB, pcq GetStringValues throw error si pas de host dans .config
+	try {
+    	hosts = getStringValues(srvBlock, "host");
+	} catch (...) {
+    	hosts.push_back(""); // => INADDR_ANY
+	}
     // TODO: enhance error handling logic within getStringValues
 
     std::vector<int> ports = getIntValues(srvBlock, "listen");
@@ -158,3 +163,4 @@ void TCPserver::createListeningSockets() {
     lst.fd = fd;
   }
 }
+

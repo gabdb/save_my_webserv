@@ -34,3 +34,4 @@ const Block* TCPserver::findLocationBlock(const Block &serverBlock, const std::s
     }
     return best; // peut être NULL → alors handleRequest utilise serverBlock pour appliquer root / index / etc.
 }
+

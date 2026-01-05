@@ -59,7 +59,37 @@ void TCPserver::parseRequestLineAndHeaders(Client &client, const std::string &he
 
 			client.request.headers[key] = value; //remplir dictionnaire key:value (dans struct HttpRequest)
 			if (key == "Content-Length")
-				client.bodyExpected = ft_atoi(value.c_str());
+			{
+				// trim espaces début
+				while (!value.empty() && (value[0] == ' ' || value[0] == '\t'))
+					value.erase(0, 1);
+				// vide => bad request
+				if (value.empty()) {
+					generateErrorResponse(client, 400);
+					client.wantRead = false;
+					client.state = SEND_RESPONSE;
+					return;
+				}
+				// digits only
+				for (size_t i = 0; i < value.size(); ++i) {
+					if (value[i] < '0' || value[i] > '9') {
+						generateErrorResponse(client, 400);
+						client.wantRead = false;
+						client.state = SEND_RESPONSE;
+						return;
+					}
+				}
+				const size_t MAX_BODY = 1000000; //arbitraire
+				size_t result = (size_t)ft_atoi(value.c_str());
+				if (result > MAX_BODY)
+				{
+					generateErrorResponse(client, 413);
+					client.wantRead = false;
+					client.state = SEND_RESPONSE;
+					return;
+				}
+				client.bodyExpected = result;
+			}
 		}
 	}
 }
@@ -69,28 +99,41 @@ void TCPserver::ReadfromClient(Client &client)
 	char buffer[4096];
 	ssize_t bytes = recv(client.fd, buffer, sizeof(buffer), 0);
 
-	// erreurs
-	if (bytes <= 0)
+	client.lastActivity = time(NULL);
+
+	if (bytes == 0) // recv = 0 → client a fermé proprement
 	{
-		// recv = 0 → client a fermé proprement
-		// recv < 0 → erreur (gérée ailleurs par poll)
 		client.state = CLOSE_CONNECTION;
 		client.wantRead = false;
 		return;
 	}
+	if (bytes < 0) // signifie probleme recv, errno interdit
+		return;
 	client.recvBuffer.append(buffer, bytes);
 
 	if (!client.request.headersComplete)
 	{
 		size_t pos = client.recvBuffer.find("\r\n\r\n");
 
-		if (pos != std::string::npos)
+		if (pos == std::string::npos) // "\r\n\r\n" pas trouve
 		{
-			// fin des headers atteint
+			// pas encore 'trouvé' la fin des headers → attendre/accumuler plus de bytes
+			return;
+		}
+		else
+		{
+			// "\r\n\r\n" trouve ! -> fin des headers atteint
 			client.request.headersComplete = true;
 			std::string headersPart = client.recvBuffer.substr(0, pos); // substr pr s'arreter à la fin des headers
 
 			parseRequestLineAndHeaders(client, headersPart);
+		
+			if (client.state == SEND_RESPONSE)
+			{
+				client.wantRead = false;
+				client.wantWrite = true;
+				return;
+			}
 
 			client.recvBuffer.erase(0, pos + 4); // retirer la partie headers du buffer "...\r\n\r\n"
 
@@ -102,11 +145,6 @@ void TCPserver::ReadfromClient(Client &client)
 				client.wantWrite = false;
 				return;
 			}
-		}
-		else
-		{
-			// pas encore 'trouvé' la fin des headers → attendre plus de bytes
-			return;
 		}
 	}
 
@@ -120,7 +158,10 @@ void TCPserver::ReadfromClient(Client &client)
 		if (client.bodyReceived >= client.bodyExpected)
 		{
 			client.request.bodyComplete = true;
-
+    		if (client.request.body.size() > client.bodyExpected) // trimmer truc en trop
+			{
+        		client.request.body.resize(client.bodyExpected);
+			}
 			// body complet -> faut traiter requete
 			client.state = HANDLE_REQUEST;
 			client.wantRead = false;

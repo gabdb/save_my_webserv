@@ -16,7 +16,9 @@
 #include <cerrno>
 #include <csignal>
 #include <cstring>
+#include <fcntl.h>
 #include <stdexcept>
+#include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -47,6 +49,21 @@ bool CGI::isFinished() const {
   return this->_finished;
 }
 
+bool CGI::hasError() const {
+  return this->_error;
+}
+
+int CGI::getExitStatus() const {
+  return this->_exitStatus;
+}
+
+static std::string buildPathInfo(const std::string &requestTarget, const std::string &scriptPath) {
+  (void)scriptPath;
+  std::string::size_type q = requestTarget.find('?');
+  std::string pathOnly = (q == std::string::npos) ? requestTarget : requestTarget.substr(0, q);
+  return pathOnly;
+}
+
 std::vector<std::string> buildCgiEnv(const Client &client, const std::string &scriptPath, const std::string &queryString) {
   std::vector<std::string> env;
   const HttpRequest &req = client.request;
@@ -58,11 +75,14 @@ std::vector<std::string> buildCgiEnv(const Client &client, const std::string &sc
   env.push_back(std::string("SCRIPT_NAME=") + scriptPath);
   env.push_back(std::string("QUERY_STRING=") + queryString);
   env.push_back(std::string("SERVER_PROTOCOL=") + req.version);
-  // TODO:
-  //  env.push_back(std::string("SERVER_SOFTWARE="));
-  //  env.push_back(std::string("SERVER_NAME="));
-  //  env.push_back(std::string("SERVER_PORT="));
-  //  env.push_back(std::string("PATH_INFO="));
+  env.push_back(std::string("SERVER_SOFTWARE=") + "webserv/1.0");
+
+  it = req.headers.find("Host");
+  if (it != req.headers.end())
+    env.push_back(std::string("SERVER_NAME=") + it->second);
+
+  std::string pathInfo = buildPathInfo(req.target, scriptPath);
+  env.push_back(std::string("PATH_INFO=") + pathInfo);
 
   it = req.headers.find("Content-Length");
   if (it != req.headers.end())
@@ -71,6 +91,15 @@ std::vector<std::string> buildCgiEnv(const Client &client, const std::string &sc
   it = req.headers.find("Content-Type");
   if (it != req.headers.end())
     env.push_back(std::string("CONTENT_TYPE=") + it->second);
+
+  if (!queryString.empty())
+    env.push_back(std::string("REQUEST_URI=") + req.target + "?" + queryString);
+  else
+    env.push_back(std::string("REQUEST_URI=") + req.target);
+
+  // TODO: Implement logic to store host address and port of VServer. (will depend on how Nico/Gab store final values (maybe key:value or seperate member?))
+  env.push_back(std::string("REMOTE_ADDR=") + "0.0.0.0");
+  env.push_back(std::string("REMOTE_PORT=") + "0");
 
   for (std::map<std::string, std::string>::const_iterator hit = req.headers.begin();
        hit != req.headers.end(); ++hit) {
@@ -105,7 +134,7 @@ CGI::CGI(Client &client,
   startProcess(interpreterPath, scriptPath, queryString);
 
   if (!client.request.body.empty()) {
-    _toCgi = client.request.body;
+    _toCgi = client.request.body; // maybe use .swap() if Gab doesn t need request.body once CGI detected
     _writingBody = true;
   }
 }
@@ -121,8 +150,9 @@ void CGI::startProcess(const std::string &interpreterPath,
   int stdoutPipe[2]; // [0] read (server reads), [1] write (CGI stdout)
 
   if (pipe(stdinPipe) < 0 || pipe(stdoutPipe) < 0) {
-    throw std::runtime_error("Failed to create CGI pipes");
     closePipes();
+    _error = true;
+    throw std::runtime_error("Failed to create CGI pipes");
   }
 
   pid_t pid = fork();
@@ -131,6 +161,7 @@ void CGI::startProcess(const std::string &interpreterPath,
     close(stdinPipe[1]);
     close(stdoutPipe[0]);
     close(stdoutPipe[1]);
+    _error = true;
     throw std::runtime_error("fork() failed for CGI");
   }
 
@@ -224,7 +255,12 @@ void CGI::writeBody(int fd, short revents) {
   }
 
   ssize_t written = write(_stdinFd, _toCgi.data(), _toCgi.size());
-  if (written <= 0) {
+  if (written < 0) {
+    // on retentera (pas de errno)
+    return;
+  }
+  if (written == 0) {
+    // improbable en pipe non-bloquant, mais on sécurise
     close(_stdinFd);
     _stdinFd = -1;
     _writingBody = false;
@@ -240,17 +276,21 @@ void CGI::writeBody(int fd, short revents) {
 }
 
 void CGI::readOutput(int fd, short revents) {
-  if (!(revents & POLLIN))
+  if (!(revents & (POLLIN | POLLHUP)))
     return;
   if (_stdoutFd < 0 || fd != _stdoutFd)
     return;
 
   char buffer[4096];
   ssize_t bytes = read(_stdoutFd, buffer, sizeof(buffer));
+
   if (bytes > 0) {
     _fromCgi.append(buffer, static_cast<size_t>(bytes));
+    return;
   }
-  else {
+
+  if (bytes == 0) {
+    // EOF: le CGI a fermé stdout => fini
     close(_stdoutFd);
     _stdoutFd = -1;
     _readingOutput = false;
@@ -259,11 +299,16 @@ void CGI::readOutput(int fd, short revents) {
     if (_pid > 0) {
       int status = 0;
       pid_t w = waitpid(_pid, &status, WNOHANG);
-      if (w > 0)
-        _exitStatus = status;
+      if (w > 0) _exitStatus = status;
+      // ne mets pas _error=true juste parce que w==0
     }
+    return;
   }
+
+  // bytes < 0 : en non-bloquant, ne ferme pas, on retentera au prochain poll
+  return;
 }
+
 
 void CGI::closePipes() {
   if (_stdinFd >= 0) {
@@ -352,7 +397,9 @@ void TCPserver::cleanupCgiForClient(const Client &client) {
 
 void TCPserver::handleCgiIo(int fd, short revents) {
   CGI *cgi = findCgiByFd(fd);
-  if (!cgi)
+  if (!cgi) {
+    std::cout << "No cgi found for fd" << fd << std::endl;
     return;
+  }
   cgi->handleIo(fd, revents);
 }

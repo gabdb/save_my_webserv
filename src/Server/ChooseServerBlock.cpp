@@ -32,7 +32,11 @@ const Block* TCPserver::chooseServerBlock(Client &client)
 	{
 		std::string hostValue = it->second; // first == 'Host' et second == par ex: 'localhost:8080'
 		
-		// p-e qu'il faudra enlever la partie ':8080' de la second value dictionnaire 
+		size_t check = hostValue.find(':'); //enlever ':8000' de localhost:8000
+    	if (check != std::string::npos)
+		{
+        	hostValue = hostValue.substr(0, check);
+    	}
 		
 		const Block *srvBlock;
 		const key *k;
