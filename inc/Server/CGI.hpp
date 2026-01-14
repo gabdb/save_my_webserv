@@ -10,44 +10,43 @@
 struct Client;
 
 class CGI {
-public:
-  CGI(Client &client,
-      const std::string &interpreterPath,
-      const std::string &scriptPath,
-      const std::string &queryString);
+  public:
+    CGI(Client &client, const std::string &interpreterPath,
+        const std::string &scriptPath, const std::string &queryString);
 
-  ~CGI();
-  void registerPollFds(std::vector<struct pollfd> &pfds) const;
-  Client &getClient() const;
-  const std::string &getRawOutput() const;
-  int getStdoutFd() const;
-  bool isFinished() const;
-  bool hasError() const;
-  int getExitStatus() const; // Gab: use to check if an error occurred during CGI execution
-  bool ownsFd(int fd) const;
-  void handleIo(int fd, short revents);
-  void closePipes();
+    ~CGI();
+    void registerPollFds(std::vector<struct pollfd> &pfds) const;
+    Client &getClient() const;
+    const std::string &getRawOutput() const;
+    int getStdoutFd() const;
+    bool isFinished() const;
+    bool hasError() const;
+    int getExitStatus()
+        const; // Gab: use to check if an error occurred during CGI execution
+    bool ownsFd(int fd) const;
+    void handleIo(int fd, short revents);
+    void closePipes();
 
-private:
-  Client *_client;
-  pid_t _pid;
-  int _stdinFd;
-  int _stdoutFd;
-  bool _writingBody;
-  bool _readingOutput;
-  bool _finished;
-  bool _error;
-  int _exitStatus;
-  std::string _toCgi;
-  std::string _fromCgi;
+  private:
+    Client *_client;
+    pid_t _pid;
+    int _stdinFd;
+    int _stdoutFd;
+    bool _writingBody;
+    bool _readingOutput;
+    bool _finished;
+    bool _error;
+    int _exitStatus;
+    std::string _toCgi;
+    std::string _fromCgi;
 
-  CGI(const CGI &);
-  CGI &operator=(const CGI &);
-  void startProcess(const std::string &interpreterPath,
-                    const std::string &scriptPath,
-                    const std::string &queryString);
-  void writeBody(int fd, short revents);
-  void readOutput(int fd, short revents);
+    CGI(const CGI &);
+    CGI &operator=(const CGI &);
+    void startProcess(const std::string &interpreterPath,
+                      const std::string &scriptPath,
+                      const std::string &queryString);
+    void writeBody(int fd, short revents);
+    void readOutput(int fd, short revents);
 };
 
 #endif

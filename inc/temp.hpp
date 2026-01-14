@@ -23,5 +23,6 @@
 #include "./Server/CGI.hpp"
 #include "./Server/TCPserver.hpp"
 #include "./config/Config.hpp"
+#include "./utils/utils.hpp"
 
 #endif

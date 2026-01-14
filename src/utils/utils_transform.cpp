@@ -12,20 +12,35 @@
 
 #include "../../inc/utils/utils.hpp"
 
-int strToInt(const std::string &str)
-{
-	std::stringstream ss(str);
-	int value;
-	ss >> value;
-	if (ss.fail())
-		throw std::runtime_error("Invalid port value : " + str);
-	return value;
+int strToInt(const std::string &str) {
+    std::stringstream ss(str);
+    int value;
+    ss >> value;
+    if (ss.fail())
+        throw std::runtime_error("Invalid port value : " + str);
+    return value;
 }
 
-std::string intToStr(const int &value)
-{
-	std::stringstream ss;
-	ss << value;
-	std::string str = ss.str();
-	return str;
+std::string intToStr(const int &value) {
+    std::stringstream ss;
+    ss << value;
+    std::string str = ss.str();
+    return str;
+}
+
+std::string joinPath(std::string a, std::string b) {
+    if (a.empty())
+        return b;
+    if (b.empty())
+        return a;
+
+    bool aSlash = (a[a.size() - 1] == '/');
+    bool bSlash = (b[0] == '/');
+
+    if (aSlash && bSlash)
+        a.erase(a.size() - 1);
+    else if (!aSlash && !bSlash)
+        a += "/";
+
+    return a + b;
 }

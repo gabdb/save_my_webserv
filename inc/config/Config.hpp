@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Config.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: nicolive <nicolive@student.s19.be>         +#+  +:+       +#+        */
+/*   By: nicolive <nicolive@student.42belgium.be    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/11/12 17:44:08 by nicolive          #+#    #+#             */
-/*   Updated: 2025/11/13 14:29:10 by nicolive         ###   ########.fr       */
+/*   Updated: 2026/01/13 13:59:58 by nicolive         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -25,45 +26,46 @@
 #define DEFAULT_CONFIG_PATH "./config/config.conf"
 
 struct key {
-  std::string name;
-  std::vector<std::string> values;
+    std::string name;
+    std::vector<std::string> values;
 };
 
-// Nico TODO: si dans "location" block, s'assurer que <Block> location n'est pas accessible (non authorisé), location { location{...} } = faux
-// Nico TODO: populate _ListeningPorts and _hosts via parseKeys or adjust logic to simply save as lambda key:value and let me fetch them later
 struct Block {
-  std::string name;               // "server" or "location"
-  std::vector<std::string> paths; // e.g. "/" for location / { ... }
-  std::vector<key> keys;          // directives like listen, host, root...
-  std::vector<Block> location;    // changed to location for easier readability (no other possibility anyways)
-  // To populate
-  std::vector<int> _listeningPorts;
-  std::vector<std::string> _hosts;
+    std::string name;
+    std::vector<std::string> paths;
+    std::vector<key> keys;
+    std::vector<Block> locations;
+    std::vector<int> listeningPorts;
 };
 
 class Config {
-public:
-  Config(const std::string filename);
-  ~Config();
+  public:
+    Config(const std::string filename);
+    ~Config();
 
-  std::vector<int> getListeningPorts() const;
-  std::vector<std::string> getHost() const;
-  const std::vector<Block> &getServer() const; // changed to '&' so Listener struct can point to respective blocks.
-  void debugPrintConfig() const;
+    std::vector<int> getListeningPorts() const;
+    const std::vector<Block> &getServer() const;
+    void debugPrintConfig() const;
 
-private:
-  std::vector<Block> _servers;
-  std::vector<int> _listeningPorts;
-  std::vector<std::string> _hosts;
+  private:
+    std::vector<Block> _servers;
+    std::vector<std::string> _hosts;
 
-  void parseConfig(const std::string filename);
+    void parseConfig(const std::string filename);
 
-  bool isConfigFileValid(const std::string filename);
-  void checkDuplicatePort(const std::vector<int> &_listeningPorts);
+    bool isConfigFileValid(const std::string filename);
+    bool isValidDirectiveName(const std::string &s);
+    void checkDuplicatePort(const std::vector<int> &listeningPorts);
+    void checkBrackets(const std::string &content);
+    void checkSemicolons(const std::string &content);
+	void checkClientBodySizeValue(const std::vector<std::string> &tokens, const size_t pos);
+	void checkPortValue(const std::vector<std::string> &tokens, const size_t pos, Block &block);
+	void checkAllowedMethod(const std::vector<std::string> &tokens, const size_t pos);
 
-  std::vector<std::string> tokenization(const std::string &content);
-  Block parseBlock(std::vector<std::string> &tokens, size_t &pos); // modified logic - block.child.pushback of a server token is not acceptable in config file (nested server should not work) + modified .child to .location for readability
-  key parseKeys(std::vector<std::string> &tokens, size_t &pos);
+	
+    std::vector<std::string> tokenization(const std::string &content);
+    Block parseBlock(std::vector<std::string> &tokens, size_t &pos);
+    key parseKeys(std::vector<std::string> &tokens, size_t &pos, Block &block);
 };
 
 #endif

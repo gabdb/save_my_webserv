@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<title>Upload Text File</title>
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			max-width: 600px;
+			padding: 20px;
+		}
+		input, textarea, button {
+			width: 100%;
+			margin-bottom: 10px;
+			font-size: 16px;
+		}
+		textarea {
+			height: 150px;
+		}
+	</style>
+</head>
+<body>
+
+	<h2>Upload text file</h2>
+
+	<input
+		id="filename"
+		type="text"
+		placeholder="Filename (e.g. hello.txt)"
+		value="hello.txt"
+	/>
+
+	<textarea id="content" placeholder="File content">hello world</textarea>
+
+	<button onclick="upload()">Upload</button>
+	<button onclick="deleteFile()">Delete file</button>
+
+	<div id="status"></div>
+
+	<script>
+		function upload() {
+			const filename = document.getElementById("filename").value.trim();
+			const content = document.getElementById("content").value;
+
+			if (!filename) {
+				document.getElementById("status").textContent = "❌ Filename required";
+				return;
+			}
+
+			fetch(`/upload/${encodeURIComponent(filename)}`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "text/plain"
+				},
+				body: content
+			})
+			.then(res => res.text())
+			.then(() => {
+				document.getElementById("status").textContent = "✅ Uploaded successfully";
+			})
+			.catch(err => {
+				document.getElementById("status").textContent =
+					"❌ Error: " + err.message;
+			});
+		}
+
+		function deleteFile() {
+			const filename = document.getElementById("filename").value.trim();
+
+			if (!filename) {
+				document.getElementById("status").textContent = "❌ Filename required to delete";
+				return;
+			}
+
+			fetch(`/upload/${encodeURIComponent(filename)}`, {
+				method: "DELETE"
+			})
+			.then(res => {
+				if (res.ok) {
+					return res.text();
+				}
+				throw new Error(`Server responded with ${res.status}`);
+			})
+			.then(() => {
+				document.getElementById("status").textContent = "✅ Deleted successfully";
+			})
+			.catch(err => {
+				document.getElementById("status").textContent =
+					"❌ Delete error: " + err.message;
+			});
+		}
+	</script>
+
+</body>
+</html>

@@ -18,5 +18,10 @@
 
 int strToInt(const std::string &str);
 std::string intToStr(const int &value);
+std::string joinPath(std::string a, std::string b);
+int ft_atoi(const char *str);
+
+// Server utils
+std::string reasonPhrase(int status);
 
 #endif
